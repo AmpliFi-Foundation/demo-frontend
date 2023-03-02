@@ -12,6 +12,12 @@ async function swapExactInputSingle(positionId, tokenIn, tokenOut, fee, amountIn
 
     const tokenInCfg = Tokens.getTokenByAddress(tokenIn);
 
+    let sqrtPriceLimitX96 = ethers.BigNumber.from("0x500000000000000000000000");
+    if (tokenOut < tokenIn) {
+        console.log('reverse');
+        sqrtPriceLimitX96 = ethers.BigNumber.from("0x2000000000000000000000000");
+    }
+
     const params = {
         positionId: positionId,
         tokenIn: tokenIn,
@@ -20,7 +26,7 @@ async function swapExactInputSingle(positionId, tokenIn, tokenOut, fee, amountIn
         amountIn: ethers.utils.parseUnits(amountIn, tokenInCfg.decimals),
         amountOutMinimum: 0,
         // TODO input by user, and converted to FixPoint96
-        sqrtPriceLimitX96: ethers.BigNumber.from("0x2000000000000000000000000"),
+        sqrtPriceLimitX96: sqrtPriceLimitX96,
     }
 
     const amountOut = await Operator.swapExactInputSingle(params, { gasLimit: 2000000 });
