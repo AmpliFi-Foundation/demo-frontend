@@ -1,6 +1,9 @@
+import { ethers } from "ethers";
 import { useEffect, useState } from "react";
 import { useWeb3Contract, useMoralis } from "react-moralis";
-import { useNotification, Input, Button } from "web3uikit";
+import { useNotification, Input, Button, ENSAvatar } from "web3uikit";
+
+import { Flex, Box, Card, Heading, Label} from "rebass";
 
 import { Bookkeeper } from "services/bookkeeper.js";
 import { UniswapV3Operator } from "services/uniswapV3Operator.js";
@@ -74,77 +77,92 @@ export default function Position() {
   };
 
   return (
-    <div>
-      <div>{JSON.stringify(erc20Stats)}</div>
-      <div>//TODO: list vitae</div>
-      <div>
-        <Input
-          id="amountToBorrow"
-          label="Amount in PUD"
-          name="Test text Input"
-          onBlur={function noRefCheck() { }}
-          onChange={(e) => setAmountToBorrow(e.target.value)}
-          placeholder=""
-          validation={null}
-          value=""
-        />
-        <Button
-          id=""
-          onClick={async function () {
-            await borrow({
-              onSuccess: handleSuccess,
-              onError: (error) => console.log(error),
-            });
-          }}
-          text="Borrow"
-        />
-      </div>
-      <div>
-        Swap{" "}
-        <Input
-          id="amountToSwap"
-          label="Amount"
-          name="Test text Input"
-          onBlur={function noRefCheck() { }}
-          onChange={(e) => setAmountToSwap(e.target.value)}
-          placeholder=""
-          validation={null}
-          value=""
-        />{" "}
-        of{" "}
-        <Input
-          id="tokenToSwap"
-          label="Token 0"
-          name="Test text Input"
-          onBlur={function noRefCheck() { }}
-          onChange={(e) => setTokenToSwap(e.target.value)}
-          placeholder=""
-          validation={null}
-          value=""
-        />{" "}
-        for{" "}
-        <Input
-          id="tokenToSwapFor"
-          label="Token 0"
-          name="Test text Input"
-          onBlur={function noRefCheck() { }}
-          onChange={(e) => setTokenToSwapFor(e.target.value)}
-          placeholder=""
-          validation={null}
-          value=""
-        />
-        <Button
-          id=""
-          onClick={() => {
-            swap()
-          }}
-          text="Swap"
-        />
-      </div>
-      {
-        //TODO: delete below later
-      }
-      <div>amount to borrow {amountToBorrow}</div>
-    </div>
+    <Flex flexWrap='wrap' mx={20}>
+      <Box px={20} py={20} width={1 / 2}>
+      <Heading>Amplifi Position #1</Heading>
+        {(erc20Stats || []).map((asset) => {
+          const token = Tokens.getTokenByAddress(asset.address);
+          return (
+            <Card width={128}>
+              <ENSAvatar address={asset.address} size={48}/>
+              <div> { ethers.utils.formatUnits(asset.value, token.decimals)} &nbsp; {token.symbol}</div>
+            </Card>
+          )
+        })
+        }
+      </Box>
+      <Box px={20} py={20} width={1 / 2}>
+        <Box px={20} py={20} width={1}>
+          <Box>
+            <Input
+              id="amountToBorrow"
+              label="Amount in PUD"
+              name="Test text Input"
+              onBlur={function noRefCheck() { }}
+              onChange={(e) => setAmountToBorrow(e.target.value)}
+              placeholder=""
+              validation={null}
+              value=""
+            />
+            <Button
+              id=""
+              onClick={async function () {
+                await borrow({
+                  onSuccess: handleSuccess,
+                  onError: (error) => console.log(error),
+                });
+              }}
+              text="Borrow"
+            />
+            <div>amount to borrow {amountToBorrow}</div>
+          </Box>
+        </Box>
+        <Box px={20} py={20} width={1}>
+          <div>
+            Swap{" "}
+            <Input
+              id="amountToSwap"
+              label="Amount"
+              name="Test text Input"
+              onBlur={function noRefCheck() { }}
+              onChange={(e) => setAmountToSwap(e.target.value)}
+              placeholder=""
+              validation={null}
+              value=""
+            />{" "}
+            of{" "}
+            <Input
+              id="tokenToSwap"
+              label="Token 0"
+              name="Test text Input"
+              onBlur={function noRefCheck() { }}
+              onChange={(e) => setTokenToSwap(e.target.value)}
+              placeholder=""
+              validation={null}
+              value=""
+            />{" "}
+            for{" "}
+            <Input
+              id="tokenToSwapFor"
+              label="Token 0"
+              name="Test text Input"
+              onBlur={function noRefCheck() { }}
+              onChange={(e) => setTokenToSwapFor(e.target.value)}
+              placeholder=""
+              validation={null}
+              value=""
+            />
+            <Button
+              id=""
+              onClick={() => {
+                swap()
+              }}
+              text="Swap"
+            />
+          </div>
+        </Box>
+
+      </Box>
+    </Flex>
   );
 }
