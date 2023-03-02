@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { useWeb3Contract, useMoralis } from "react-moralis";
 import { useNotification, Input, Button } from "web3uikit";
-import abis from "../constants/abis.json";
-import addresses from "../constants/addresses.json";
+
+import { Bookkeeper } from "services/bookkeeper.js";
+import { UniswapV3Operator } from "services/uniswapV3Operator.js";
+import { Tokens } from "constants/tokens.js";
 
 export default function Position() {
+
+  const positionId = 1;
+
   const { isWeb3Enabled } = useMoralis();
   const dispatch = useNotification();
 
@@ -14,40 +19,37 @@ export default function Position() {
   const [tokenToSwap, setTokenToSwap] = useState();
   const [tokenToSwapFor, setTokenToSwapFor] = useState();
 
-  const { runContractFunction: getERC20Stats } = useWeb3Contract({
-    abi: abis["bookkeeper"],
-    contractAddress: addresses["bookkeeper"],
-    functionName: "getERC20Stats",
-    params: { positionId: 1 },
-  });
-
-  const { runContractFunction: borrow } = useWeb3Contract({
-    abi: abis["bookkeeper"],
-    contractAddress: addresses["bookkeeper"],
-    functionName: "borrow",
-    params: {
-      positionId: 1,
-      amount: amountToBorrow,
-      data: "0x4e487b710000000000000000000000000000000000000000000000000000000000000012",
-    },
-  });
-
-  const { runContractFunction: swap } = useWeb3Contract({
-    abi: abis["uniswapV3Operator"],
-    contractAddress: addresses["uniswapV3Operator"],
-    functionName: "swapExactInputSingle",
-    params: {
-      //TODO:
-    },
-  });
-
   async function updateUI() {
+    const { ethereum } = window;
     setErc20Stats(
-      await getERC20Stats({
-        onError: (error) => console.log(error),
-      })
+      await Bookkeeper.getAllERC20AssetOfPosition(ethereum, positionId)
     );
   }
+
+  async function borrow() {
+    const { ethereum } = window;
+    await Bookkeeper.borrow(ethereum, 1, amountToBorrow);
+    // TODO update UI after metamask get confirmed message
+    return updateUI();
+  }
+
+  async function swap() {
+    const tokenIn = Tokens.PUD;
+    const tokenOut = Tokens.USDC;
+    const fee = 500;
+
+    if (amountToSwap > 0) {
+      const amountOut = await UniswapV3Operator.swapExactInputSingle(
+        positionId, tokenIn.address, tokenOut.address, fee, amountToSwap,
+      )
+      console.log("swap amount out:", amountOut);
+    }
+
+    // TODO update UI after metamask get confirmed message
+    return updateUI();
+  }
+
+
 
   useEffect(() => {
     if (isWeb3Enabled) {
@@ -80,7 +82,7 @@ export default function Position() {
           id="amountToBorrow"
           label="Amount in PUD"
           name="Test text Input"
-          onBlur={function noRefCheck() {}}
+          onBlur={function noRefCheck() { }}
           onChange={(e) => setAmountToBorrow(e.target.value)}
           placeholder=""
           validation={null}
@@ -103,7 +105,7 @@ export default function Position() {
           id="amountToSwap"
           label="Amount"
           name="Test text Input"
-          onBlur={function noRefCheck() {}}
+          onBlur={function noRefCheck() { }}
           onChange={(e) => setAmountToSwap(e.target.value)}
           placeholder=""
           validation={null}
@@ -114,7 +116,7 @@ export default function Position() {
           id="tokenToSwap"
           label="Token 0"
           name="Test text Input"
-          onBlur={function noRefCheck() {}}
+          onBlur={function noRefCheck() { }}
           onChange={(e) => setTokenToSwap(e.target.value)}
           placeholder=""
           validation={null}
@@ -125,7 +127,7 @@ export default function Position() {
           id="tokenToSwapFor"
           label="Token 0"
           name="Test text Input"
-          onBlur={function noRefCheck() {}}
+          onBlur={function noRefCheck() { }}
           onChange={(e) => setTokenToSwapFor(e.target.value)}
           placeholder=""
           validation={null}
@@ -133,13 +135,10 @@ export default function Position() {
         />
         <Button
           id=""
-          onClick={async function () {
-            await swap({
-              onSuccess: handleSuccess,
-              onError: (error) => console.log(error),
-            });
+          onClick={() => {
+            swap()
           }}
-          text="Borrow"
+          text="Swap"
         />
       </div>
       {
