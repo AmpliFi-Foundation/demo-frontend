@@ -1,4 +1,4 @@
-import { ConnectButton, Grid } from "Web3uikit";
+import { ConnectButton, Grid } from "web3uikit";
 import { Flex, Text, Box } from "rebass";
 
 export default function Header() {
