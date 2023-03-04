@@ -22,6 +22,8 @@ import {
   ThemeProvider,
   Toolbar,
   Typography,
+  Select,
+  MenuItem
 } from "@mui/material";
 
 import { Tokens } from "constants/tokens";
@@ -43,20 +45,16 @@ export default function Home() {
   const [positionId, setPositionId] = useState(1);
   const [assets, setAssets] = useState([]);
   const [stats, setStats] = useState({ value: 0, debt: 0, minEquity: 0 });
-  const [amountToBorrow, setAmmountToBorrow] = useState(0);
+  const [amountToBorrow, setAmountToBorrow] = useState(0);
   const [amountToRepay, setAmountToRepay] = useState(0);
-  const [amountToSwap, setAmountToSwap] = useState();
-  const [tokenToSwap, setTokenToSwap] = useState();
-  const [tokenToSwapFor, setTokenToSwapFor] = useState();
+  const [amountToSwap, setAmountToSwap] = useState(0);
+  const [tokenToSwap, setTokenToSwap] = useState("PUD");
+  const [tokenToSwapFor, setTokenToSwapFor] = useState("USDC");
 
   async function updateUI() {
     const { ethereum } = window;
     Tokens.setChainId(ethereum.chainId);
     AmpilifiContracts.setChainId(ethereum.chainId);
-
-    ethereum.on('message', (msg) => {
-      console.log(msg);
-    });
 
     const positionId = getPositionIdFromSearch();
     setPositionId(positionId);
@@ -185,7 +183,7 @@ export default function Home() {
                             fullWidth
                             label="amount"
                             autoFocus
-                            onChange={(e) => setAmmountToBorrow(e.target.value)}
+                            onChange={(e) => setAmountToBorrow(e.target.value)}
                           />
                         </Grid>
                         <Typography variant="body" color="text.secondary" sx={{ mt: 4, ml: 1 }}>
@@ -195,6 +193,7 @@ export default function Home() {
                           type="submit"
                           variant="contained"
                           sx={{ mt: 3, mb: 2, ml: 2, mr: 2 }}
+                          disabled={amountToBorrow == 0}
                           onClick={async function () {
                             await borrow({ onSuccess: handleSuccess, onError: (error) => console.log(error) });
                           }}
@@ -220,6 +219,7 @@ export default function Home() {
                           type="submit"
                           variant="contained"
                           sx={{ mt: 3, mb: 2, ml: 2, mr: 2 }}
+                          disabled={amountToRepay == 0}
                           onClick={async function () {
                             await repay({ onSuccess: handleSuccess, onError: (error) => console.log(error) });
                           }}
@@ -239,28 +239,41 @@ export default function Home() {
                           />
                         </Grid>
                         <Grid item xs={12} sm={2}>
-                          <TextField
-                            required
-                            fullWidth
-                            label="toke in"
-                            onChange={(e) => setTokenToSwap(e.target.value)}
-                          />
+                          <Select
+                            labelId="tokenIn-select-label"
+                            id="tokenIn-select"
+                            value={tokenToSwap}
+                            label="tokenIn"
+                            onChange={(e) => {setTokenToSwap(e.target.value); }}
+                          >
+                            { Tokens.getAllTokens().map((token) => {
+                              return <MenuItem value={token.symbol} key={token.symbol}> {token.symbol} </MenuItem>
+                            })
+                            }
+                          </Select>
                         </Grid>
                         <Typography variant="body" color="text.secondary" sx={{ mt: 4, ml: 2 }}>
                           for
                         </Typography>
                         <Grid item xs={12} sm={2}>
-                          <TextField
-                            required
-                            fullWidth
-                            label="toke out"
-                            onChange={(e) => setTokenToSwapFor(e.target.value)}
-                          />
+                          <Select
+                            labelId="tokenOut-select-label"
+                            id="tokenOut-select"
+                            value={tokenToSwapFor}
+                            label="tokenOut"
+                            onChange={(e) => {setTokenToSwapFor(e.target.value); }}
+                          >
+                            { Tokens.getAllTokens().filter((t) => t.symbol != tokenToSwap ).map((token) => {
+                              return <MenuItem value={token.symbol} key={token.symbol}> {token.symbol} </MenuItem>
+                            })
+                            }
+                          </Select>
                         </Grid>
                         <Button
                           type="submit"
                           variant="contained"
                           sx={{ mt: 3, mb: 2, ml: 5, mr: 2 }}
+                          disabled={amountToSwap == 0 || tokenToSwap == tokenToSwapFor }
                           onClick={async function () {
                             await swap({ onSuccess: handleSuccess, onError: (error) => console.log(error) });
                           }}

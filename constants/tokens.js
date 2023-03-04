@@ -43,8 +43,9 @@ function _buildMap(chainId) {
     return src.reduce((col, item) => {
         col.byAddr[item.address] = item;
         col.bySym[item.symbol] = item;
+        col.all.push(item);
         return col;
-    }, {byAddr:{}, bySym:{}});
+    }, {byAddr:{}, bySym:{}, all: []});
 }
 
 function setChainId(chainId) {
@@ -70,5 +71,6 @@ function getTokenBySymbol(symbol) {
 export const Tokens = {
     getTokenByAddress,
     getTokenBySymbol,
+    getAllTokens: () => {return _tokenMapCache.all; },
     setChainId
 };
