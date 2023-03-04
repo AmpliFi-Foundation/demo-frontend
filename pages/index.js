@@ -114,9 +114,7 @@ export default function Home() {
         sx={{ borderBottom: (theme) => `1px solid ${theme.palette.divider}` }}
       >
         <Toolbar sx={{ flexWrap: "wrap" }}>
-          <Typography variant="h2" color="text.primary" noWrap sx={{ mt: 1, mb: 1, flexGrow: 1 }}>
-            AmpliFi
-          </Typography>
+          <Container sx={{ flexGrow: 1 }}>{<img src="/logo.png" />}</Container>
           <ConnectButton moralisAuth={false} />
         </Toolbar>
       </AppBar>
