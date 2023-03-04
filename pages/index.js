@@ -24,16 +24,23 @@ import {
   Typography,
 } from "@mui/material";
 
-import { Tokens } from "constants/tokens.js";
-import { Bookkeeper } from "services/bookkeeper.js";
-import { UniswapV3Operator } from "services/uniswapV3Operator.js";
+import { Tokens } from "constants/tokens";
+import { AmpilifiContracts } from "@/constants/contracts";
+import { Bookkeeper } from "services/bookkeeper";
+import { UniswapV3Operator } from "services/uniswapV3Operator";
+
+function getPositionIdFromSearch() {
+  const query = new URLSearchParams(location.search);
+  const positionId = (query.get("positionId") || "1");
+  return parseInt(positionId);
+}
 
 export default function Home() {
-  const positionId = 1;
   const fee = 500;
   const mdTheme = createTheme();
   const { isWeb3Enabled } = useMoralis();
 
+  const [positionId, setPositionId] = useState(1);
   const [assets, setAssets] = useState([]);
   const [stats, setStats] = useState({ value: 0, debt: 0, minEquity: 0 });
   const [amountToBorrow, setAmmountToBorrow] = useState(0);
@@ -44,20 +51,30 @@ export default function Home() {
 
   async function updateUI() {
     const { ethereum } = window;
-    const erc20Assets = await Bookkeeper.getAllERC20AssetOfPosition(ethereum, positionId);
-    //TODO: get debt
-    const debt = 100;
+    Tokens.setChainId(ethereum.chainId);
+    AmpilifiContracts.setChainId(ethereum.chainId);
 
-    let totalValue, totalMinEquity;
-    for (let i = 0; i < erc20Assets.length; i++) {
-      totalValue += erc20Assets[i].value;
-      totalMinEquity += erc20Assets[i].minEquity;
-    }
+    ethereum.on('message', (msg) => {
+      console.log(msg);
+    });
+
+    const positionId = getPositionIdFromSearch();
+    setPositionId(positionId);
+
+    const erc20Assets = await Bookkeeper.getAllERC20AssetOfPosition(ethereum, positionId);
+    const debt = await Bookkeeper.getDebtOfPosition(ethereum, positionId);
+    const PUD = Tokens.getTokenBySymbol("PUD");
+
+    let totalValue = 0, totalMinEquity = 0 ;
+    erc20Assets.forEach((asset) => {
+      totalValue += formatUnits(asset.value, PUD.decimals);
+      totalMinEquity += formatUnits(asset.minEquity, PUD.decimals);
+    });
 
     setAssets(erc20Assets);
     setStats({
       value: totalValue,
-      debt: debt,
+      debt: formatUnits(debt.value, PUD.decimals),
       minEquity: totalMinEquity,
     });
   }
@@ -86,6 +103,10 @@ export default function Home() {
         amountToSwap
       );
     }
+  }
+
+  function formatUnits(amount, decimals) {
+    return parseFloat(ethers.utils.formatUnits(amount, decimals));
   }
 
   const handleSuccess = async function (tx) {
@@ -134,7 +155,7 @@ export default function Home() {
             <Toolbar>
               <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
                 <Typography variant="h4" color="inherit" noWrap sx={{ flexGrow: 1 }}>
-                  Position 1
+                  Position #{positionId}
                 </Typography>{" "}
               </Container>
             </Toolbar>
@@ -258,20 +279,20 @@ export default function Home() {
                       Stats
                     </Typography>
                     <Typography color="text.secondary" sx={{ pl: 2, pr: 2, flex: 1 }}>
-                      Position Value: {stats.value} PUD
+                      Position Value: {stats.value.toFixed(4)} PUD
                     </Typography>
                     <Typography color="text.secondary" sx={{ pl: 2, pr: 2, flex: 1 }}>
-                      Position Debt: {stats.debt} PUD
+                      Position Debt: {stats.debt.toFixed(4)} PUD
                     </Typography>
                     <Typography color="text.secondary" sx={{ pl: 2, pr: 2, flex: 1 }}>
-                      Position Equity: {stats.value - stats.debt} PUD
+                      Position Equity: {(stats.value - stats.debt).toFixed(4)} PUD
                     </Typography>
                     <Typography color="text.secondary" sx={{ pl: 2, pr: 2, flex: 1 }}></Typography>
                     <Typography color="text.secondary" sx={{ pl: 2, pr: 2, flex: 1 }}>
-                      Equity Ratio: {(stats.value - stats.debt) / stats.value}%
+                      Equity Ratio: {((stats.value - stats.debt) * 100 / stats.value).toFixed(2)}%
                     </Typography>
                     <Typography color="text.secondary" sx={{ pl: 2, pr: 2, flex: 1 }}>
-                      Liquidation Ratio: {stats.minEquity / stats.value}%
+                      Liquidation Ratio: {(stats.minEquity * 100 / stats.value).toFixed(2)}%
                     </Typography>
                   </Paper>
                 </Grid>
@@ -293,16 +314,15 @@ export default function Home() {
                       </TableHead>
                       <TableBody>
                         {assets.map((asset) => {
-                          const token = Tokens.getTokenByAddress(asset.address);
                           return (
                             <TableRow key={asset.address}>
-                              <TableCell>{token.symbol}</TableCell>
-                              <TableCell>{asset.minEquity / asset.value} %</TableCell>
+                              <TableCell>{asset.symbol}</TableCell>
+                              <TableCell>{((asset.minEquity / asset.value) * 100).toFixed(2)} %</TableCell>
                               <TableCell>
-                                {ethers.utils.formatUnits(asset.amount, token.decimals)} {token.symbol}
+                                {formatUnits(asset.amount, asset.decimals).toFixed(4)} {asset.symbol}
                               </TableCell>
                               <TableCell align="right">
-                                {ethers.utils.formatUnits(asset.value, Tokens.PUD.decimals)} PUD
+                                {formatUnits(asset.value, 18).toFixed(4) } PUD {/* TODO: fix hardcode*/}
                               </TableCell>
                             </TableRow>
                           );
