@@ -23,7 +23,7 @@ import {
   Toolbar,
   Typography,
   Select,
-  MenuItem
+  MenuItem,
 } from "@mui/material";
 
 import { Tokens } from "constants/tokens";
@@ -33,7 +33,7 @@ import { UniswapV3Operator } from "services/uniswapV3Operator";
 
 function getPositionIdFromSearch() {
   const query = new URLSearchParams(location.search);
-  const positionId = (query.get("positionId") || "1");
+  const positionId = query.get("positionId") || "1";
   return parseInt(positionId);
 }
 
@@ -44,7 +44,7 @@ export default function Home() {
 
   const [positionId, setPositionId] = useState(1);
   const [assets, setAssets] = useState([]);
-  const [stats, setStats] = useState({ value: 0, debt: 0, minEquity: 0 });
+  const [stats, setStats] = useState({ value: 0, debt: 0, minEquity: 0, pud: 0 });
   const [amountToBorrow, setAmountToBorrow] = useState(0);
   const [amountToRepay, setAmountToRepay] = useState(0);
   const [amountToSwap, setAmountToSwap] = useState(0);
@@ -63,10 +63,15 @@ export default function Home() {
     const debt = await Bookkeeper.getDebtOfPosition(ethereum, positionId);
     const PUD = Tokens.getTokenBySymbol("PUD");
 
-    let totalValue = 0, totalMinEquity = 0 ;
+    let totalValue = 0,
+      totalMinEquity = 0,
+      totalPUD = 0;
     erc20Assets.forEach((asset) => {
       totalValue += formatUnits(asset.value, PUD.decimals);
       totalMinEquity += formatUnits(asset.minEquity, PUD.decimals);
+      if (asset.symbol == "PUD") {
+        totalPUD += formatUnits(asset.value, PUD.decimals);
+      }
     });
 
     setAssets(erc20Assets);
@@ -74,6 +79,7 @@ export default function Home() {
       value: totalValue,
       debt: formatUnits(debt.value, PUD.decimals),
       minEquity: totalMinEquity,
+      pud: totalPUD,
     });
   }
 
@@ -244,12 +250,18 @@ export default function Home() {
                             id="tokenIn-select"
                             value={tokenToSwap}
                             label="tokenIn"
-                            onChange={(e) => {setTokenToSwap(e.target.value); }}
+                            onChange={(e) => {
+                              setTokenToSwap(e.target.value);
+                            }}
                           >
-                            { Tokens.getAllTokens().map((token) => {
-                              return <MenuItem value={token.symbol} key={token.symbol}> {token.symbol} </MenuItem>
-                            })
-                            }
+                            {Tokens.getAllTokens().map((token) => {
+                              return (
+                                <MenuItem value={token.symbol} key={token.symbol}>
+                                  {" "}
+                                  {token.symbol}{" "}
+                                </MenuItem>
+                              );
+                            })}
                           </Select>
                         </Grid>
                         <Typography variant="body" color="text.secondary" sx={{ mt: 4, ml: 2 }}>
@@ -261,19 +273,27 @@ export default function Home() {
                             id="tokenOut-select"
                             value={tokenToSwapFor}
                             label="tokenOut"
-                            onChange={(e) => {setTokenToSwapFor(e.target.value); }}
+                            onChange={(e) => {
+                              setTokenToSwapFor(e.target.value);
+                            }}
                           >
-                            { Tokens.getAllTokens().filter((t) => t.symbol != tokenToSwap ).map((token) => {
-                              return <MenuItem value={token.symbol} key={token.symbol}> {token.symbol} </MenuItem>
-                            })
-                            }
+                            {Tokens.getAllTokens()
+                              .filter((t) => t.symbol != tokenToSwap)
+                              .map((token) => {
+                                return (
+                                  <MenuItem value={token.symbol} key={token.symbol}>
+                                    {" "}
+                                    {token.symbol}{" "}
+                                  </MenuItem>
+                                );
+                              })}
                           </Select>
                         </Grid>
                         <Button
                           type="submit"
                           variant="contained"
                           sx={{ mt: 3, mb: 2, ml: 5, mr: 2 }}
-                          disabled={amountToSwap == 0 || tokenToSwap == tokenToSwapFor }
+                          disabled={amountToSwap == 0 || tokenToSwap == tokenToSwapFor}
                           onClick={async function () {
                             await swap({ onSuccess: handleSuccess, onError: (error) => console.log(error) });
                           }}
@@ -302,10 +322,10 @@ export default function Home() {
                     </Typography>
                     <Typography color="text.secondary" sx={{ pl: 2, pr: 2, flex: 1 }}></Typography>
                     <Typography color="text.secondary" sx={{ pl: 2, pr: 2, flex: 1 }}>
-                      Equity Ratio: {((stats.value - stats.debt) * 100 / stats.value).toFixed(2)}%
+                      Equity Ratio: {(((stats.value - stats.debt) * 100) / stats.value).toFixed(2)}%
                     </Typography>
                     <Typography color="text.secondary" sx={{ pl: 2, pr: 2, flex: 1 }}>
-                      Liquidation Ratio: {(stats.minEquity * 100 / stats.value).toFixed(2)}%
+                      Liquidation Ratio: {((stats.minEquity * 100) / (stats.value - stats.pud)).toFixed(2)}%
                     </Typography>
                   </Paper>
                 </Grid>
@@ -335,7 +355,7 @@ export default function Home() {
                                 {formatUnits(asset.amount, asset.decimals).toFixed(4)} {asset.symbol}
                               </TableCell>
                               <TableCell align="right">
-                                {formatUnits(asset.value, 18).toFixed(4) } PUD {/* TODO: fix hardcode*/}
+                                {formatUnits(asset.value, 18).toFixed(4)} PUD {/* TODO: fix hardcode*/}
                               </TableCell>
                             </TableRow>
                           );
